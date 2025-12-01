@@ -1,0 +1,21 @@
+# Source files
+src/
+tests/
+
+# Config files
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+eslint.config.js
+
+# Coverage
+coverage/
+*.lcov
+
+# Development
+node_modules/
+*.log
+.DS_Store
+
+# Build artifacts (only dist/ should be published)
+*.tsbuildinfo

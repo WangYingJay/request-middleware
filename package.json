@@ -1,0 +1,81 @@
+{
+  "name": "@bugfix2019/request-middleware",
+  "version": "0.0.1",
+  "description": "A powerful request middleware library with context support. Supports axios, xhr, and fetch.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/engine/index.d.ts",
+      "import": "./dist/engine/index.mjs",
+      "require": "./dist/engine/index.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/index.d.ts",
+      "import": "./dist/adapters/index.mjs",
+      "require": "./dist/adapters/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.mjs",
+      "require": "./dist/client/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:run": "vitest --run",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "request",
+    "middleware",
+    "axios",
+    "fetch",
+    "xhr",
+    "interceptor",
+    "http",
+    "context"
+  ],
+  "author": "bugfix2019",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bugfix2020/request-middleware"
+  },
+  "peerDependencies": {
+    "axios": ">=0.21.0"
+  },
+  "peerDependenciesMeta": {
+    "axios": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^1.6.1",
+    "axios": "^1.6.0",
+    "jsdom": "^27.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@microsoft/fetch-event-source": "^2.0.1"
+  }
+}
