@@ -21,6 +21,19 @@ export {
   
   // compose 函数
   composeMiddlewares,
+
+  // 错误处理
+  RequestErrorType,
+  RequestError,
+  NetworkError,
+  TimeoutError,
+  HttpError,
+  AbortError,
+  ParseError,
+  normalizeError,
+  createHttpError,
+  isRequestError,
+  isRetryableError,
 } from './engine';
 
 // Engine 类型导出
@@ -74,3 +87,11 @@ export type {
   FetchAdapterConfig,
   EventSourceAdapterConfig,
 } from './adapters';
+
+// ============================================================================
+// 内置中间件导出
+// ============================================================================
+
+export { createRetryMiddleware, retryMiddleware, createRetryAdapter } from './middlewares';
+
+export type { RetryMiddlewareOptions } from './middlewares';

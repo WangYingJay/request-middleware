@@ -5,6 +5,14 @@
  */
 
 import type { RequestConfig, ResponseData, HttpAdapter } from '../engine';
+import {
+  TimeoutError,
+  HttpError,
+  NetworkError,
+  AbortError,
+  ParseError,
+  normalizeError,
+} from '../engine';
 
 /**
  * Fetch 适配器配置
@@ -151,16 +159,34 @@ export function createFetchAdapter(config: FetchAdapterConfig = {}): HttpAdapter
         }
       }
 
-      // 处理超时
+      // 处理请求取消和超时
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      let abortController: AbortController | undefined;
+      let internalAbortController: AbortController | undefined;
+      const userSignal = processedConfig.signal;
 
-      if (processedConfig.timeout && processedConfig.timeout > 0) {
-        abortController = new AbortController();
-        fetchConfig.signal = abortController.signal;
-        timeoutId = setTimeout(() => {
-          abortController?.abort();
-        }, processedConfig.timeout);
+      // 如果用户的 signal 已经被取消，立即抛出错误
+      if (userSignal?.aborted) {
+        throw new AbortError('Request aborted by user', processedConfig);
+      }
+
+      // 如果用户提供了 signal 或需要超时控制，创建内部 AbortController
+      if (userSignal || (processedConfig.timeout && processedConfig.timeout > 0)) {
+        internalAbortController = new AbortController();
+        fetchConfig.signal = internalAbortController.signal;
+
+        // 监听用户的 signal
+        if (userSignal) {
+          userSignal.addEventListener('abort', () => {
+            internalAbortController?.abort();
+          }, { once: true });
+        }
+
+        // 设置超时
+        if (processedConfig.timeout && processedConfig.timeout > 0) {
+          timeoutId = setTimeout(() => {
+            internalAbortController?.abort();
+          }, processedConfig.timeout);
+        }
       }
 
       try {
@@ -168,12 +194,25 @@ export function createFetchAdapter(config: FetchAdapterConfig = {}): HttpAdapter
 
         // HTTP 错误状态码处理
         if (!response.ok) {
-          const error = new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-          (error as Error & { status: number }).status = response.status;
-          throw error;
+          throw new HttpError(
+            `HTTP Error: ${response.status} ${response.statusText}`,
+            response.status,
+            response.statusText,
+            processedConfig
+          );
         }
 
-        const data = await parseResponseBody<TResData>(response, processedConfig.responseType);
+        let data: TResData;
+        try {
+          data = await parseResponseBody<TResData>(response, processedConfig.responseType);
+        } catch (parseErr) {
+          throw new ParseError(
+            'Failed to parse response body',
+            processedConfig,
+            undefined,
+            parseErr instanceof Error ? parseErr : undefined
+          );
+        }
 
         let result: ResponseData<any> = {
           data,
@@ -189,6 +228,40 @@ export function createFetchAdapter(config: FetchAdapterConfig = {}): HttpAdapter
         }
 
         return result as ResponseData<TResData>;
+      } catch (error) {
+        // 已经是统一错误类型，直接抛出
+        if (error instanceof HttpError || error instanceof ParseError) {
+          throw error;
+        }
+
+        // 处理 AbortController 取消
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          // 优先检查用户是否主动取消
+          if (userSignal?.aborted) {
+            throw new AbortError('Request aborted by user', processedConfig);
+          }
+          // 否则是超时导致的取消
+          if (processedConfig.timeout && processedConfig.timeout > 0) {
+            throw new TimeoutError(
+              `Request timeout after ${processedConfig.timeout}ms`,
+              processedConfig.timeout,
+              processedConfig
+            );
+          }
+          throw new AbortError('Request aborted', processedConfig);
+        }
+
+        // 处理网络错误
+        if (error instanceof TypeError) {
+          throw new NetworkError(
+            error.message || 'Network error',
+            processedConfig,
+            error
+          );
+        }
+
+        // 其他错误统一处理
+        throw normalizeError(error, processedConfig);
       } finally {
         if (timeoutId) {
           clearTimeout(timeoutId);

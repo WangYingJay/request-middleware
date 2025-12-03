@@ -6,6 +6,9 @@
 
 import {
   createMiddlewareEngine,
+  normalizeError,
+  RequestError,
+  RequestErrorType,
   type Middleware,
   type HttpContext,
   type HttpClientOptions,
@@ -80,7 +83,8 @@ export function createHttpClient(options: HttpClientOptions): IHttpClient {
       try {
         ctx.response = await adapter.request<TReqData, TResData>(ctx.request);
       } catch (error) {
-        ctx.error = error instanceof Error ? error : new Error(String(error));
+        // 统一错误处理
+        ctx.error = normalizeError(error, ctx.request);
         throw ctx.error;
       }
     };
@@ -95,7 +99,11 @@ export function createHttpClient(options: HttpClientOptions): IHttpClient {
 
     // 检查响应
     if (!ctx.response) {
-      throw new Error('No response received');
+      throw new RequestError(
+        'No response received from adapter',
+        RequestErrorType.UNKNOWN,
+        { config: ctx.request }
+      );
     }
 
     return ctx.response;
